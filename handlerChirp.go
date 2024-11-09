@@ -104,7 +104,33 @@ func handlerChirp(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlerGetAllChirp(w http.ResponseWriter, r *http.Request) {
-    chirpsResp, err := cfg.Db.GetAllChirps(r.Context())
+    authorID := r.URL.Query().Get("author_id")
+    sort := r.URL.Query().Get("sort")
+    var chirpsResp []database.Chirp
+    var er error
+    if authorID=="" {
+        if sort=="" || sort=="asc" {
+            chirpsResp, er = cfg.Db.GetAllChirps(r.Context())
+        } else {
+            chirpsResp, er = cfg.Db.GetAllChirpsDesc(r.Context()) 
+        }
+    } else {
+        parsedUserId, err := uuid.Parse(authorID)
+        if err!=nil {
+            http.Error(w, "Internal Server error while chirping 1", http.StatusInternalServerError)
+            return
+        }
+        if sort=="" || sort=="asc"{
+            chirpsResp, er = cfg.Db.GetChirpsByUser(r.Context(), parsedUserId)
+        } else {
+            chirpsResp, er = cfg.Db.GetChirpsByUserDesc(r.Context(), parsedUserId)
+        }
+    }
+    if er!=nil {
+        http.Error(w, "Internal Server error while chirping 1", http.StatusInternalServerError)
+        return
+    }
+
     chirps := make([]Chirp, len(chirpsResp))
     for i, chirp := range chirpsResp {
         tmp := Chirp {
