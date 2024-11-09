@@ -7,6 +7,7 @@ import (
     "github.com/google/uuid"
     "time"
     "github.com/ayushjaiswal22/chirpy/internal/database"
+    "github.com/ayushjaiswal22/chirpy/internal/auth"
 )
 
 
@@ -53,24 +54,29 @@ func handlerChirp(w http.ResponseWriter, r *http.Request) {
     err := decoder.Decode(&chirpReq)
     if err!=nil{
         w.WriteHeader(http.StatusBadRequest)
-        w.Write([]byte("{\"error\":\"Something went wrong\"}"))
+        w.Write([]byte("{\"error\":\"Something went wrong while decoding\"}"))
         return 
     }
+    tokenString, err := auth.GetBearerToken(r.Header)
+    if err!=nil {
+        w.WriteHeader(http.StatusBadRequest)
+        w.Write([]byte("{\"error\":\"Could not get Bearer Token\"}"))
+        return
+    }
+    uid, err := auth.ValidateJWT(tokenString, cfg.SecretKey)
+    if err!=nil {
+        w.WriteHeader(http.StatusUnauthorized)
+        w.Write([]byte("{\"error\":\"401 Unauthorized\"}"))
+        return
+    }
     if validateChirp(&chirpReq.Body) {
-        parsedUserID, err := uuid.Parse(chirpReq.UserID)
-        if err!=nil {
-            w.WriteHeader(http.StatusBadRequest)
-            w.Write([]byte("{\"error\":\"Something went wrong\"}"))
-            return 
-        }
-
         t := time.Now().UTC()
         chirpRequest := database.CreateChirpParams{
             ID: uuid.New(),
             CreatedAt: t,
             UpdatedAt: t,
             Body:chirpReq.Body,
-            UserID:parsedUserID,
+            UserID:uid,
         }
         chirpResp, err := cfg.Db.CreateChirp(r.Context(), chirpRequest)
         if err!=nil {
