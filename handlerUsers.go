@@ -174,3 +174,67 @@ func handlerLoginUser(w http.ResponseWriter, r *http.Request) {
     w.Write([]byte(data))
 
 }
+
+
+func handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
+    
+    decoder := json.NewDecoder(r.Body)
+    var userReq CreateUserRequest
+    err := decoder.Decode(&userReq)
+    if err!=nil {
+        w.WriteHeader(http.StatusBadRequest)
+        w.Write([]byte("{\"error\":\"Something went wrong\"}"))
+        return 
+    }
+    fmt.Println(userReq.Email)
+    hashedPswd, err := auth.HashPassword(userReq.Password)
+    if err!=nil {
+        w.WriteHeader(http.StatusBadRequest)
+        w.Write([]byte("{\"error\":\"Something went wrong\"}"))
+        return
+    }
+
+    tokenString, err := auth.GetBearerToken(r.Header)
+    if err!=nil {
+        w.WriteHeader(http.StatusUnauthorized)
+        w.Write([]byte("{\"error\":\"Could not get Bearer Token\"}"))
+        return
+    }
+
+    userId, err := auth.ValidateJWT(tokenString, cfg.SecretKey)
+    if err!=nil {
+        w.WriteHeader(http.StatusUnauthorized)
+        w.Write([]byte("{\"error\":\"401 Unauthorized\"}"))
+        return
+    }
+    
+    userParams := database.UpdateUserParams{
+        ID: userId,
+        Email: userReq.Email,
+        HashedPassword: hashedPswd,
+        UpdatedAt: time.Now().UTC(),
+    }
+    u, err := cfg.Db.UpdateUser(r.Context(), userParams)
+    if err!=nil {
+        fmt.Println(err)
+        http.Error(w, "Internal server error 1", http.StatusInternalServerError)
+        return
+    }
+
+    user := User{
+		ID:        u.ID,
+        CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
+		Email:     u.Email,
+        AccessToken: "",
+        RefreshToken: "",
+     }
+    
+    w.WriteHeader(http.StatusOK)
+    data, err := json.Marshal(user)
+    if err!=nil {
+        http.Error(w, "Internal server error 2", http.StatusInternalServerError)
+        return
+    }
+    w.Write([]byte(data))
+}

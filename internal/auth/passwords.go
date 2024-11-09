@@ -5,6 +5,8 @@ import (
     "net/http"
     "fmt"
     "time"
+    "strings"
+    "errors"
     "crypto/rand"
     "golang.org/x/crypto/bcrypt"
     "github.com/golang-jwt/jwt/v5"
@@ -59,8 +61,12 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 
 func GetBearerToken(headers http.Header) (string, error) {
     tokenString := headers.Get("Authorization")
-    tokenString = tokenString[len("Bearer "):]
-    return tokenString, nil
+    if strings.Contains(tokenString, "Bearer ") {
+        tokenString = tokenString[len("Bearer "):]
+        return tokenString, nil
+    } else {
+        return "", errors.New("Malformed access token")
+    }
 }
 
 func HashPassword(password string) (string, error) {

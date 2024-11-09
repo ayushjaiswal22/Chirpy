@@ -59,7 +59,7 @@ func handlerChirp(w http.ResponseWriter, r *http.Request) {
     }
     tokenString, err := auth.GetBearerToken(r.Header)
     if err!=nil {
-        w.WriteHeader(http.StatusBadRequest)
+        w.WriteHeader(http.StatusUnauthorized)
         w.Write([]byte("{\"error\":\"Could not get Bearer Token\"}"))
         return
     }
@@ -135,6 +135,11 @@ func handlerGetChirpById(w http.ResponseWriter, r *http.Request) {
     }
 
     chirpResp, err := cfg.Db.GetChirpById(r.Context(), parseChirpId)
+    if err!=nil {
+        w.WriteHeader(http.StatusNotFound)
+        w.Write([]byte("{\"error\":\"404 Chirp not found.\"}"))
+        return
+    } 
     chirp := Chirp {
         ID: chirpResp.ID,
         CreatedAt: chirpResp.CreatedAt,
@@ -149,3 +154,44 @@ func handlerGetChirpById(w http.ResponseWriter, r *http.Request) {
     }
     w.Write([]byte(data))
 }
+
+
+
+func handlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
+   chirpId := r.PathValue("chirpID")
+   parseChirpId, err := uuid.Parse(chirpId)
+
+    if err!=nil{
+        w.WriteHeader(http.StatusBadRequest)
+        w.Write([]byte("{\"error\":\"Something went wrong\"}"))
+        return 
+    }
+
+    tokenString, err := auth.GetBearerToken(r.Header)
+    if err!=nil {
+        w.WriteHeader(http.StatusUnauthorized)
+        w.Write([]byte("{\"error\":\"Could not get Bearer Token\"}"))
+        return
+    }
+    uid, err := auth.ValidateJWT(tokenString, cfg.SecretKey)
+    if err!=nil {
+        w.WriteHeader(http.StatusForbidden)
+        w.Write([]byte("{\"error\":\"403 Forbidden\"}"))
+        return
+    }
+    chirpResp, err := cfg.Db.GetChirpById(r.Context(), parseChirpId)
+    if uid != chirpResp.UserID {
+        w.WriteHeader(http.StatusForbidden)
+        w.Write([]byte("{\"error\":\"403 Forbidden\"}"))
+        return
+    }
+    
+    err = cfg.Db.DeleteChirpById(r.Context(), parseChirpId)
+    if err!=nil {
+        w.WriteHeader(http.StatusNotFound)
+        w.Write([]byte("{\"error\":\"404 Chirp not found.\"}"))
+        return
+    } 
+    w.WriteHeader(http.StatusNoContent)
+}
+
