@@ -25,6 +25,7 @@ type User struct {
     Email     string `json:"email"`
     AccessToken     string `json:"token"`
     RefreshToken     string `json:"refresh_token"`
+    IsChirpyRed bool `json:"is_chirpy_red"`
 }
 
 
@@ -67,6 +68,7 @@ func handlerCreateUser(w http.ResponseWriter, r *http.Request) {
 		Email:     u.Email,
         AccessToken: "",
         RefreshToken: "",
+        IsChirpyRed: u.IsChirpyRed,
      }
     
     w.WriteHeader(http.StatusCreated)
@@ -161,6 +163,7 @@ func handlerLoginUser(w http.ResponseWriter, r *http.Request) {
         Email:     userRes.Email,
         AccessToken:     access_token,
         RefreshToken:    refresh_token,
+        IsChirpyRed: userRes.IsChirpyRed,
     }
 
 
@@ -228,6 +231,7 @@ func handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
 		Email:     u.Email,
         AccessToken: "",
         RefreshToken: "",
+        IsChirpyRed: u.IsChirpyRed,
      }
     
     w.WriteHeader(http.StatusOK)
@@ -237,4 +241,50 @@ func handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
         return
     }
     w.Write([]byte(data))
+}
+
+type PolkaParams struct {
+    Event string `json:"event"`
+    Data struct {
+        UserID string `json:"user_id"`
+    } `json:"data"` 
+}
+
+func handlerPolka(w http.ResponseWriter, r *http.Request) {
+    apiKey, err := auth.GetAPIKey(r.Header)
+    if err!=nil || apiKey != cfg.ApiKey {
+        w.WriteHeader(http.StatusUnauthorized)
+        w.Write([]byte("{\"error\":\"401 Unauthorized\"}"))
+        return
+    }
+
+    decoder := json.NewDecoder(r.Body)
+    var polkaParams PolkaParams 
+    err = decoder.Decode(&polkaParams)
+    if err!=nil {
+        w.WriteHeader(http.StatusBadRequest)
+        w.Write([]byte("{\"error\":\"Something went wrong\"}"))
+        return 
+    }
+    if polkaParams.Event != "user.upgraded" {
+        w.WriteHeader(http.StatusNoContent)
+        return
+    }
+    parsedUserId, err := uuid.Parse(polkaParams.Data.UserID)
+    if err!=nil{
+        w.WriteHeader(http.StatusBadRequest)
+        w.Write([]byte("{\"error\":\"Something went wrong\"}"))
+        return 
+    }
+
+    err = cfg.Db.SetChirpyRed(r.Context(), parsedUserId)
+    if err!=nil {
+        w.WriteHeader(http.StatusNotFound)
+        w.Write([]byte("{\"error\":\"Something went wrong\"}"))
+        return
+    }
+
+    w.WriteHeader(http.StatusNoContent)
+
+
 }

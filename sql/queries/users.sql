@@ -16,5 +16,9 @@ UPDATE users
 SET email=$2, hashed_password=$3, updated_at=$4
 WHERE id=$1
 RETURNING *;
+-- name: SetChirpyRed :exec
+UPDATE users
+SET is_chirpy_red=true
+WHERE id=$1;
 -- name: DeleteUsers :exec
 DELETE FROM users;

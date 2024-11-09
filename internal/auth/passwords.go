@@ -78,3 +78,12 @@ func CheckPasswordHash(password, hash string) error {
     err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
     return err
 }
+func GetAPIKey(headers http.Header) (string, error) {
+    tokenString := headers.Get("Authorization")
+    if strings.Contains(tokenString, "ApiKey ") {
+        tokenString = tokenString[len("ApiKey "):]
+        return tokenString, nil
+    } else {
+        return "", errors.New("Malformed API Key")
+    }
+}

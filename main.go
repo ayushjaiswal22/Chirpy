@@ -17,6 +17,7 @@ type apiConfig struct {
     Db *database.Queries
     Platform string
     SecretKey string
+    ApiKey string
 }
 
 var notAllowed map[string]bool
@@ -41,7 +42,12 @@ func main() {
         log.Fatal(err)
     }
     dbQueries := database.New(db)
-    cfg = apiConfig{Db:dbQueries, Platform:os.Getenv("PLATFORM"), SecretKey:os.Getenv("SECRET_KEY")}
+    cfg = apiConfig{
+        Db:dbQueries, 
+        Platform:os.Getenv("PLATFORM"), 
+        SecretKey:os.Getenv("SECRET_KEY"),
+        ApiKey:os.Getenv("POLKA_KEY"),
+    }
     cfg.fileserverHits.Store(0)
 	mux := http.NewServeMux()
 	mux.Handle("/app/", cfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
@@ -57,6 +63,7 @@ func main() {
 	mux.HandleFunc("POST /api/revoke", handlerRevokeToken)
 	mux.HandleFunc("PUT /api/users", handlerUpdateUser)
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", handlerDeleteChirp)
+	mux.HandleFunc("POST /api/polka/webhooks", handlerPolka)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
