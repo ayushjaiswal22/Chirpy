@@ -45,6 +45,6 @@ POLKA_KEY="f271c81ff7084ee5b99a5091b42d486e"
 | Get a Chirp by id           | GET       | /api/chirps/{chirp_id}          |                                                 |                                                      |                         |
 | Get All Chirps of a user    | GET       | /api/chirps?author_id=<user_id> |                                                 |                                                      |                         |
 | Delete a Chirp by id        | DELETE    | /api/chirps/{chirp_id}          | "Authorization: Bearer your_access_token_here"  |                                                      |                         |
-| Webhook by Polka            | POST      | /api/polka/webhooks             |                                                 |                                                      | To upgrade to Chirpy Red|
+| Webhook by Polka            | POST      | /api/polka/webhooks             | "Authorization: ApiKey Polka_API_Key_here"      |                                                      | To upgrade to Chirpy Red|
 
 
